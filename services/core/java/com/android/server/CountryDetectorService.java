@@ -17,13 +17,18 @@
 package com.android.server;
 
 import android.content.Context;
+import android.content.pm.GosPackageState;
+import android.content.pm.GosPackageStateFlag;
 import android.location.Country;
 import android.location.CountryListener;
 import android.location.ICountryDetector;
 import android.location.ICountryListener;
+import android.os.Binder;
 import android.os.Handler;
 import android.os.IBinder;
+import android.os.Process;
 import android.os.RemoteException;
+import android.os.UserHandle;
 import android.text.TextUtils;
 import android.util.PrintWriterPrinter;
 import android.util.Printer;
@@ -116,9 +121,17 @@ public class CountryDetectorService extends ICountryDetector.Stub {
     public Country detectCountry() {
         if (!mSystemReady) {
             return null; // server not yet active
-        } else {
-            return mCountryDetector.detectCountry();
         }
+        int callingUid = Binder.getCallingUid();
+        boolean hideCarrierSource = false;
+        if (callingUid != Process.myUid()) {
+            String[] pkgs = mContext.getPackageManager().getPackagesForUid(callingUid);
+            if (pkgs != null) {
+                hideCarrierSource = GosPackageState.get(pkgs[0], UserHandle.getUserId(callingUid))
+                        .hasFlag(GosPackageStateFlag.HIDE_CARRIER_INFO);
+            }
+        }
+        return mCountryDetector.detectCountry(hideCarrierSource);
     }
 
     /**

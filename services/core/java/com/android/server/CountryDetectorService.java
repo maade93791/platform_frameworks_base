@@ -21,8 +21,10 @@ import android.location.Country;
 import android.location.CountryListener;
 import android.location.ICountryDetector;
 import android.location.ICountryListener;
+import android.os.Binder;
 import android.os.Handler;
 import android.os.IBinder;
+import android.os.Process;
 import android.os.RemoteException;
 import android.text.TextUtils;
 import android.util.PrintWriterPrinter;
@@ -33,6 +35,7 @@ import com.android.internal.R;
 import com.android.internal.annotations.VisibleForTesting;
 import com.android.internal.os.BackgroundThread;
 import com.android.internal.util.DumpUtils;
+import com.android.server.ext.CarrierInfoAccessUtils;
 import com.android.server.location.countrydetector.ComprehensiveCountryDetector;
 import com.android.server.location.countrydetector.CountryDetectorBase;
 
@@ -116,9 +119,12 @@ public class CountryDetectorService extends ICountryDetector.Stub {
     public Country detectCountry() {
         if (!mSystemReady) {
             return null; // server not yet active
-        } else {
-            return mCountryDetector.detectCountry();
         }
+        int callingUid = Binder.getCallingUid();
+        boolean hideCarrierSource = callingUid != Process.myUid()
+                && CarrierInfoAccessUtils.shouldHideAndReport(mContext, callingUid,
+                "CountryDetector.detectCountry");
+        return mCountryDetector.detectCountry(hideCarrierSource);
     }
 
     /**

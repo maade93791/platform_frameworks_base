@@ -59,6 +59,7 @@ import android.content.ContextParams;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.database.Cursor;
+import android.ext.carrierinfo.HideCarrierInfo;
 import android.net.ConnectivityManager;
 import android.net.NetworkCapabilities;
 import android.net.Uri;
@@ -2829,6 +2830,7 @@ public class TelephonyManager {
      */
     @RequiresFeature(PackageManager.FEATURE_TELEPHONY_RADIO_ACCESS)
     public String getNetworkOperatorName() {
+        if (HideCarrierInfo.hideFromSelf("getNetworkOperatorName")) return "";
         return getNetworkOperatorName(getSubId());
     }
 
@@ -2851,6 +2853,7 @@ public class TelephonyManager {
      */
     @RequiresFeature(PackageManager.FEATURE_TELEPHONY_RADIO_ACCESS)
     public String getNetworkOperator() {
+        if (HideCarrierInfo.hideFromSelf("getNetworkOperator")) return "";
         return getNetworkOperatorForPhone(getPhoneId());
     }
 
@@ -2932,6 +2935,7 @@ public class TelephonyManager {
      */
     @RequiresFeature(PackageManager.FEATURE_TELEPHONY_RADIO_ACCESS)
     public boolean isNetworkRoaming() {
+        if (HideCarrierInfo.hideFromSelf("isNetworkRoaming")) return false;
         return isNetworkRoaming(getSubId());
     }
 
@@ -2962,6 +2966,7 @@ public class TelephonyManager {
      */
     @RequiresFeature(PackageManager.FEATURE_TELEPHONY_RADIO_ACCESS)
     public String getNetworkCountryIso() {
+        if (HideCarrierInfo.hideFromSelf("getNetworkCountryIso")) return "";
         return getNetworkCountryIso(getSlotIndex());
     }
 
@@ -3684,6 +3689,7 @@ public class TelephonyManager {
      */
     @RequiresFeature(PackageManager.FEATURE_TELEPHONY_SUBSCRIPTION)
     public @SimState int getSimState() {
+        if (HideCarrierInfo.hideFromSelf("getSimState")) return SIM_STATE_ABSENT;
         int simState = getSimStateIncludingLoaded();
         if (simState == SIM_STATE_LOADED) {
             simState = SIM_STATE_READY;
@@ -3972,6 +3978,7 @@ public class TelephonyManager {
      */
     @RequiresFeature(PackageManager.FEATURE_TELEPHONY_SUBSCRIPTION)
     public @SimState int getSimState(int slotIndex) {
+        if (HideCarrierInfo.hideFromSelf("getSimState")) return SIM_STATE_ABSENT;
         int simState = getSimStateForSlotIndex(slotIndex);
         if (simState == SIM_STATE_LOADED) {
             simState = SIM_STATE_READY;
@@ -3989,6 +3996,7 @@ public class TelephonyManager {
      */
     @RequiresFeature(PackageManager.FEATURE_TELEPHONY_SUBSCRIPTION)
     public String getSimOperator() {
+        if (HideCarrierInfo.hideFromSelf("getSimOperator")) return "";
         return getSimOperatorNumeric();
     }
 
@@ -4074,6 +4082,7 @@ public class TelephonyManager {
      */
     @RequiresFeature(PackageManager.FEATURE_TELEPHONY_SUBSCRIPTION)
     public String getSimOperatorName() {
+        if (HideCarrierInfo.hideFromSelf("getSimOperatorName")) return "";
         return getSimOperatorNameForPhone(getPhoneId());
     }
 
@@ -4115,6 +4124,9 @@ public class TelephonyManager {
         if (android.app.AppGlobals.getInitialPackageId() == android.ext.PackageId.PIXEL_HEALTH) {
             // Body temperature feature is region-locked to US as of version 2224
             return "us";
+        }
+        if (HideCarrierInfo.hideFromSelf("getSimCountryIso")) {
+            return "";
         }
 
         return getSimCountryIsoForPhone(getPhoneId());

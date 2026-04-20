@@ -470,6 +470,7 @@ import com.android.server.contentcapture.ContentCaptureManagerInternal;
 import com.android.server.crashrecovery.CrashRecoveryAdaptor;
 import com.android.server.crashrecovery.CrashRecoveryHelper;
 import com.android.server.criticalevents.CriticalEventLog;
+import com.android.server.ext.CarrierInfoAccessUtils;
 import com.android.server.ext.DynCodeLoadingUtils;
 import com.android.server.firewall.IntentFirewall;
 import com.android.server.graphics.fonts.FontManagerInternal;
@@ -20071,5 +20072,18 @@ public class ActivityManagerService extends IActivityManager.Stub
             return;
         }
         r.getWindowProcessController().setOptimizationInfo(compilerFilter, compilationReason);
+    }
+
+    @Override
+    public void showCarrierInfoAccessNotification(String pkgName, String apiName) {
+        final int callerUid = Binder.getCallingUid();
+        enforceCallingPackage(pkgName, callerUid);
+
+        final long token = Binder.clearCallingIdentity();
+        try {
+            CarrierInfoAccessUtils.reportAccess(mContext, pkgName, UserHandle.getUserId(callerUid), apiName);
+        } finally {
+            Binder.restoreCallingIdentity(token);
+        }
     }
 }

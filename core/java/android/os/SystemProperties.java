@@ -21,6 +21,7 @@ import android.annotation.Nullable;
 import android.annotation.SystemApi;
 import android.compat.annotation.UnsupportedAppUsage;
 import android.ravenwood.annotation.RavenwoodKeepWholeClass;
+import android.ext.carrierinfo.HideCarrierInfo;
 import android.util.Log;
 import android.util.MutableInt;
 
@@ -148,6 +149,7 @@ public class SystemProperties {
     @SystemApi
     public static String get(@NonNull String key) {
         if (TRACK_KEY_ACCESS) onKeyAccess(key);
+        if (HideCarrierInfo.shouldFilter(key)) return "";
         return native_get(key);
     }
 
@@ -164,6 +166,7 @@ public class SystemProperties {
     @SystemApi
     public static String get(@NonNull String key, @Nullable String def) {
         if (TRACK_KEY_ACCESS) onKeyAccess(key);
+        if (HideCarrierInfo.shouldFilter(key)) return def != null ? def : "";
         return native_get(key, def);
     }
 
@@ -179,6 +182,7 @@ public class SystemProperties {
     @SystemApi
     public static int getInt(@NonNull String key, int def) {
         if (TRACK_KEY_ACCESS) onKeyAccess(key);
+        if (HideCarrierInfo.shouldFilter(key)) return def;
         return native_get_int(key, def);
     }
 
@@ -194,6 +198,7 @@ public class SystemProperties {
     @SystemApi
     public static long getLong(@NonNull String key, long def) {
         if (TRACK_KEY_ACCESS) onKeyAccess(key);
+        if (HideCarrierInfo.shouldFilter(key)) return def;
         return native_get_long(key, def);
     }
 
@@ -214,6 +219,7 @@ public class SystemProperties {
     @SystemApi
     public static boolean getBoolean(@NonNull String key, boolean def) {
         if (TRACK_KEY_ACCESS) onKeyAccess(key);
+        if (HideCarrierInfo.shouldFilter(key)) return def;
         return native_get_boolean(key, def);
     }
 
@@ -346,6 +352,9 @@ public class SystemProperties {
      * @hide
      */
     @Nullable public static Handle find(@NonNull String name) {
+        if (HideCarrierInfo.shouldFilter(name)) {
+            return null;
+        }
         long nativeHandle = native_find(name);
         if (nativeHandle == 0) {
             return null;

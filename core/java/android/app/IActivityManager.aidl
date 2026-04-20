@@ -1061,4 +1061,6 @@ interface IActivityManager {
      */
     oneway void reportOptimizationInfo(in IBinder app, in String compilerFilter,
             in String compilationReason);
+
+    oneway void showCarrierInfoAccessNotification(String pkgName, String apiInfo);
 }

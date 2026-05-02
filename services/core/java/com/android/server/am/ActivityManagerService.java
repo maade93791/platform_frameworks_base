@@ -299,6 +299,7 @@ import android.content.pm.ActivityPresentationInfo;
 import android.content.pm.ApplicationInfo;
 import android.content.pm.ApplicationInfo.HiddenApiEnforcementPolicy;
 import android.content.pm.GosPackageState;
+import android.content.pm.GosPackageStateFlag;
 import android.content.pm.IPackageDataObserver;
 import android.content.pm.IPackageManager;
 import android.content.pm.IncrementalStatesInfo;
@@ -20073,4 +20074,25 @@ public class ActivityManagerService extends IActivityManager.Stub
         r.getWindowProcessController().setOptimizationInfo(compilerFilter, compilationReason);
     }
 
+
+    @Override
+    public boolean shouldHideCarrierInfoForUid(int targetUid, String apiName) {
+        final int callerUid = Binder.getCallingUid();
+        if (callerUid != Process.PHONE_UID
+                && UserHandle.getAppId(callerUid) != Process.SYSTEM_UID) {
+            throw new SecurityException(
+                    "shouldHideCarrierInfoForUid requires system/phone caller, got uid " + callerUid);
+        }
+        final long token = Binder.clearCallingIdentity();
+        try {
+            String[] pkgs = mContext.getPackageManager().getPackagesForUid(targetUid);
+            if (pkgs == null) {
+                return false;
+            }
+            return GosPackageState.get(pkgs[0], UserHandle.getUserId(targetUid))
+                    .hasFlag(GosPackageStateFlag.HIDE_CARRIER_INFO);
+        } finally {
+            Binder.restoreCallingIdentity(token);
+        }
+    }
 }

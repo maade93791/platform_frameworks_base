@@ -257,7 +257,8 @@ class ZygoteConnection {
                             parsedArgs.mIsTopApp, parsedArgs.mPkgDataInfoList,
                             parsedArgs.mAllowlistedDataInfoList, parsedArgs.mBindMountAppDataDirs,
                             parsedArgs.mBindMountAppStorageDirs,
-                            parsedArgs.mBindMountSyspropOverrides, parsedArgs.mExtraArgs);
+                            parsedArgs.mBindMountSyspropOverrides,
+                            parsedArgs.mBindMountExtendedSyspropOverrides, parsedArgs.mExtraArgs);
 
                     try {
                         if (pid == 0) {

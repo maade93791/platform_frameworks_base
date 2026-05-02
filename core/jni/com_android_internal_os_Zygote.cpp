@@ -1763,6 +1763,20 @@ static void BindMountSyspropOverride(fail_fn_t fail_fn, JNIEnv* env) {
   // ReloadBuildJavaConstants(env);
 }
 
+static void BindMountExtendedSyspropOverride(fail_fn_t fail_fn, JNIEnv* env) {
+    std::string source = "/dev/__properties__/extended_override";
+    std::string target = "/dev/__properties__";
+    if (access(source.c_str(), F_OK) != 0) {
+      return;
+    }
+    if (access(target.c_str(), F_OK) != 0) {
+        return;
+    }
+    BindMount(source, target, fail_fn);
+    __system_properties_zygote_reload();
+    // see the TODO above BindMountSyspropOverride
+}
+
 static void BindMountStorageToLowerFs(const userid_t user_id, const uid_t uid,
     const char* dir_name, const char* package, fail_fn_t fail_fn) {
     bool hasSdcardFs = IsSdcardfsUsed();
@@ -1918,7 +1932,7 @@ static void SpecializeCommon(JNIEnv* env, uid_t uid, gid_t gid, jintArray gids, 
                              bool is_top_app, jobjectArray pkg_data_info_list,
                              jobjectArray allowlisted_data_info_list, bool mount_data_dirs,
                              bool mount_storage_dirs, bool mount_sysprop_overrides,
-                             ExtraArgs& extra_args) {
+                             bool mount_extended_sysprop_overrides, ExtraArgs& extra_args) {
     const char* process_name = is_system_server ? "system_server" : "zygote";
     auto fail_fn = std::bind(ZygoteFailure, env, process_name, managed_nice_name, _1);
     auto extract_fn = std::bind(ExtractJString, env, process_name, managed_nice_name, _1);
@@ -1987,7 +2001,9 @@ static void SpecializeCommon(JNIEnv* env, uid_t uid, gid_t gid, jintArray gids, 
                              fail_fn);
     }
 
-    if (mount_sysprop_overrides) {
+    if (mount_extended_sysprop_overrides) {
+        BindMountExtendedSyspropOverride(fail_fn, env);
+    } else if (mount_sysprop_overrides) {
         BindMountSyspropOverride(fail_fn, env);
     }
 
@@ -2537,7 +2553,8 @@ static jint com_android_internal_os_Zygote_nativeForkAndSpecialize(
         jintArray managed_fds_to_close, jintArray managed_fds_to_ignore, jboolean is_child_zygote,
         jstring instruction_set, jstring app_data_dir, jboolean is_top_app, jboolean use_fifo_ui,
         jobjectArray pkg_data_info_list, jobjectArray allowlisted_data_info_list,
-        jboolean mount_data_dirs, jboolean mount_storage_dirs, jboolean mount_sysprop_overrides, jlongArray extra_jlong_args) {
+        jboolean mount_data_dirs, jboolean mount_storage_dirs, jboolean mount_sysprop_overrides,
+        jboolean mount_extended_sysprop_overrides, jlongArray extra_jlong_args) {
     ExtraArgs extra_args(env, extra_jlong_args);
     jlong capabilities = zygote::CalculateCapabilities(env, uid, gid, gids, is_child_zygote);
     jlong bounding_capabilities = zygote::CalculateBoundingCapabilities(env, uid, gid, gids);
@@ -2583,7 +2600,8 @@ static jint com_android_internal_os_Zygote_nativeForkAndSpecialize(
                          is_child_zygote == JNI_TRUE, instruction_set, app_data_dir,
                          is_top_app == JNI_TRUE, pkg_data_info_list, allowlisted_data_info_list,
                          mount_data_dirs == JNI_TRUE, mount_storage_dirs == JNI_TRUE,
-                         mount_sysprop_overrides == JNI_TRUE, extra_args);
+                         mount_sysprop_overrides == JNI_TRUE, mount_extended_sysprop_overrides == JNI_TRUE,
+                         extra_args);
     }
     return pid;
 }
@@ -2621,7 +2639,8 @@ static jint com_android_internal_os_Zygote_nativeForkSystemServer(
                        effective_capabilities, 0, MOUNT_EXTERNAL_DEFAULT, nullptr, nullptr, true,
                        false, nullptr, nullptr, /* is_top_app= */ false,
                        /* pkg_data_info_list */ nullptr,
-                       /* allowlisted_data_info_list */ nullptr, false, false, false, extra_args);
+                       /* allowlisted_data_info_list */ nullptr, false, false, false, false,
+                       extra_args);
   } else if (pid > 0) {
       // The zygote process checks whether the child process has died or not.
       ALOGI("System server process %d has been created", pid);
@@ -2769,7 +2788,8 @@ static void com_android_internal_os_Zygote_nativeSpecializeAppProcess(
         jboolean is_child_zygote, jstring instruction_set, jstring app_data_dir,
         jboolean is_top_app, jobjectArray pkg_data_info_list,
         jobjectArray allowlisted_data_info_list, jboolean mount_data_dirs,
-        jboolean mount_storage_dirs, jboolean mount_sysprop_overrides, jlongArray extra_jlong_args) {
+        jboolean mount_storage_dirs, jboolean mount_sysprop_overrides,
+        jboolean mount_extended_sysprop_overrides, jlongArray extra_jlong_args) {
     ExtraArgs extra_args(env, extra_jlong_args);
     jlong capabilities = zygote::CalculateCapabilities(env, uid, gid, gids, is_child_zygote);
     jlong bounding_capabilities = zygote::CalculateBoundingCapabilities(env, uid, gid, gids);
@@ -2779,7 +2799,8 @@ static void com_android_internal_os_Zygote_nativeSpecializeAppProcess(
                      is_child_zygote == JNI_TRUE, instruction_set, app_data_dir,
                      is_top_app == JNI_TRUE, pkg_data_info_list, allowlisted_data_info_list,
                      mount_data_dirs == JNI_TRUE, mount_storage_dirs == JNI_TRUE,
-                     mount_sysprop_overrides == JNI_TRUE, extra_args);
+                     mount_sysprop_overrides == JNI_TRUE,
+                     mount_extended_sysprop_overrides == JNI_TRUE, extra_args);
 }
 
 /**
@@ -3073,7 +3094,7 @@ static jint execveatWrapper(JNIEnv* env, jclass, jint dirFd, jstring javaFilenam
 static const JNINativeMethod gMethods[] = {
         {"nativeForkAndSpecialize",
          "(II[II[[IILjava/lang/String;Ljava/lang/String;[I[IZLjava/lang/String;Ljava/lang/"
-         "String;ZZ[Ljava/lang/String;[Ljava/lang/String;ZZZ[J)I",
+         "String;ZZ[Ljava/lang/String;[Ljava/lang/String;ZZZZ[J)I",
          (void*)com_android_internal_os_Zygote_nativeForkAndSpecialize},
         {"nativeForkSystemServer", "(II[II[[IJJ)I",
          (void*)com_android_internal_os_Zygote_nativeForkSystemServer},
@@ -3089,7 +3110,7 @@ static const JNINativeMethod gMethods[] = {
          (void*)com_android_internal_os_Zygote_nativeAddUsapTableEntry},
         {"nativeSpecializeAppProcess",
          "(II[II[[IILjava/lang/String;Ljava/lang/String;ZLjava/lang/String;Ljava/lang/"
-         "String;Z[Ljava/lang/String;[Ljava/lang/String;ZZZ[J)V",
+         "String;Z[Ljava/lang/String;[Ljava/lang/String;ZZZZ[J)V",
          (void*)com_android_internal_os_Zygote_nativeSpecializeAppProcess},
         {"nativeInitNativeState", "(Z)V",
          (void*)com_android_internal_os_Zygote_nativeInitNativeState},

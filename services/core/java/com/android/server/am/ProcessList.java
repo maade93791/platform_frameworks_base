@@ -19,6 +19,7 @@ package com.android.server.am;
 import static android.app.ActivityManager.PROCESS_CAPABILITY_NONE;
 import static android.app.ActivityManager.PROCESS_STATE_CACHED_ACTIVITY;
 import static android.app.ActivityManager.PROCESS_STATE_NONEXISTENT;
+import static android.app.ActivityManager.getService;
 import static android.app.ActivityManagerInternal.OOM_ADJ_REASON_PROCESS_END;
 import static android.app.ActivityManagerInternal.OOM_ADJ_REASON_RESTRICTION_CHANGE;
 import static android.app.ActivityThread.PROC_START_SEQ_IDENT;
@@ -96,6 +97,7 @@ import android.content.pm.IPackageManager;
 import android.content.pm.PackageManager;
 import android.content.pm.PackageManagerInternal;
 import android.content.res.Resources;
+import android.ext.settings.app.AswHideCarrierInfo;
 import android.ext.settings.app.AswUseExtendedVaSpace;
 import android.ext.settings.app.AswUseHardenedMalloc;
 import android.graphics.Point;
@@ -2587,6 +2589,11 @@ public final class ProcessList implements ProcessStateController.ProcessLruUpdat
                 allowlistedAppDataInfoMap = null;
             }
 
+            final PackageManagerInternal pmi = mService.getPackageManagerInternal();
+            final GosPackageState gosPs = pmi.getGosPackageState(app.info.packageName, userId);
+            final boolean bindMountExtendedSyspropOverrides =
+                    AswHideCarrierInfo.I.get(mService.mContext, userId, app.info, gosPs);
+
             boolean bindOverrideSysprops = !app.info.isSystemApp();
             if (!bindOverrideSysprops) {
                 if (Build.IS_USERDEBUG || Build.IS_ENG) {
@@ -2646,7 +2653,7 @@ public final class ProcessList implements ProcessStateController.ProcessLruUpdat
                         app.info.dataDir, invokeWith, app.info.packageName, zygotePolicyFlags,
                         isTopApp, app.getDisabledCompatChanges(), pkgDataInfoMap,
                         allowlistedAppDataInfoMap, bindMountAppsData, bindMountAppStorageDirs,
-                        bindOverrideSysprops,
+                        bindOverrideSysprops, bindMountExtendedSyspropOverrides,
                         app.getStartSeq(),
                         new String[]{PROC_START_SEQ_IDENT + app.getStartSeq()}, flatExtraArgs);
                 // By now the process group should have been created by zygote.

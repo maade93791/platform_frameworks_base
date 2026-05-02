@@ -760,6 +760,7 @@ public class Process {
                                            boolean bindMountAppsData,
                                            boolean bindMountAppStorageDirs,
                                            boolean bindMountSystemOverrides,
+                                           boolean bindMountExtendedSyspropOverrides,
                                            long startSeq,
                                            @Nullable String[] zygoteArgs,
                                            @Nullable String flatExtraArgs) {
@@ -768,7 +769,8 @@ public class Process {
                     abi, instructionSet, appDataDir, invokeWith, packageName,
                     zygotePolicyFlags, isTopApp, disabledCompatChanges,
                     pkgDataInfoMap, whitelistedDataInfoMap, bindMountAppsData,
-                    bindMountAppStorageDirs, bindMountSystemOverrides, startSeq, zygoteArgs, flatExtraArgs);
+                    bindMountAppStorageDirs, bindMountSystemOverrides,
+                    bindMountExtendedSyspropOverrides, startSeq, zygoteArgs, flatExtraArgs);
     }
 
     /** @hide */
@@ -797,6 +799,7 @@ public class Process {
                 disabledCompatChanges, /* pkgDataInfoMap */ null,
                 /* whitelistedDataInfoMap */ null, /* bindMountAppsData */ false,
                 /* bindMountAppStorageDirs */ false, /* bindMountSyspropOverrides */ false,
+                /* bindMountExtendedSyspropOverrides */ false,
                 startSeq, zygoteArgs,
                 flatExtraArgs);
     }

@@ -1063,4 +1063,6 @@ interface IActivityManager {
             in String compilationReason);
 
     oneway void showCarrierInfoAccessNotification(String pkgName, String apiInfo);
+
+    boolean shouldHideCarrierInfoForUid(int targetUid, String apiName);
 }

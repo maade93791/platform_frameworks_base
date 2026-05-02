@@ -20086,4 +20086,20 @@ public class ActivityManagerService extends IActivityManager.Stub
             Binder.restoreCallingIdentity(token);
         }
     }
+
+    @Override
+    public boolean shouldHideCarrierInfoForUid(int targetUid, String apiName) {
+        final int callerUid = Binder.getCallingUid();
+        if (callerUid != Process.PHONE_UID
+                && UserHandle.getAppId(callerUid) != Process.SYSTEM_UID) {
+            throw new SecurityException(
+                    "shouldHideCarrierInfoForUid requires system/phone caller, got uid " + callerUid);
+        }
+        final long token = Binder.clearCallingIdentity();
+        try {
+            return CarrierInfoAccessUtils.shouldHideAndReport(mContext, targetUid, apiName);
+        } finally {
+            Binder.restoreCallingIdentity(token);
+        }
+    }
 }

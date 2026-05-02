@@ -155,8 +155,11 @@ public class AppZygote {
                     appDataDir, null, packageName,
                     /*zygotePolicyFlags=*/ ZYGOTE_POLICY_FLAG_EMPTY, isTopApp,
                     disabledCompatChanges, pkgDataInfoMap, allowlistedDataInfoList,
-                    false, false, false, startSeq,
-                    zygoteArgs, null);
+                    /* bindMountAppsData */ false,
+                    /* bindMountAppStorageDirs */ false,
+                    /* bindMountSyspropOverrides */ false,
+                    /* bindMountExtendedSyspropOverrides */ false,
+                    startSeq, zygoteArgs, null);
         } catch (RuntimeException e) {
             final boolean zygote_dead = getProcess(flatExtraArgs).isDead();
             if (!zygote_dead) {
@@ -172,8 +175,11 @@ public class AppZygote {
                 appDataDir, null, packageName,
                 /*zygotePolicyFlags=*/ ZYGOTE_POLICY_FLAG_EMPTY, isTopApp,
                 disabledCompatChanges, pkgDataInfoMap, allowlistedDataInfoList,
-                false, false, false, startSeq,
-                zygoteArgs, null);
+                /* bindMountAppsData */ false,
+                /* bindMountAppStorageDirs */ false,
+                /* bindMountSyspropOverrides */ false,
+                /* bindMountExtendedSyspropOverrides */ false,
+                startSeq, zygoteArgs, null);
     }
 
     @GuardedBy("mLock")

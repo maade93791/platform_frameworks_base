@@ -360,6 +360,7 @@ public class ZygoteProcess {
                                                   boolean bindMountAppsData,
                                                   boolean bindMountAppStorageDirs,
                                                   boolean bindOverrideSysprops,
+                                                  boolean bindMountExtendedSyspropOverrides,
                                                   long startSeq,
                                                   @Nullable String[] zygoteArgs, @Nullable String flatExtraArgs) {
         // TODO (chriswailes): Is there a better place to check this value?
@@ -373,7 +374,7 @@ public class ZygoteProcess {
                     abi, instructionSet, appDataDir, invokeWith, /*startChildZygote=*/ false,
                     packageName, zygotePolicyFlags, isTopApp, disabledCompatChanges,
                     pkgDataInfoMap, allowlistedDataInfoList, bindMountAppsData,
-                    bindMountAppStorageDirs, bindOverrideSysprops, startSeq, zygoteArgs, flatExtraArgs);
+                    bindMountAppStorageDirs, bindOverrideSysprops, bindMountExtendedSyspropOverrides, startSeq, zygoteArgs, flatExtraArgs);
         } catch (ZygoteStartFailedEx ex) {
             Log.e(LOG_TAG,
                     "Starting VM process through Zygote failed");
@@ -652,6 +653,7 @@ public class ZygoteProcess {
                                                       boolean bindMountAppsData,
                                                       boolean bindMountAppStorageDirs,
                                                       boolean bindMountOverrideSysprops,
+                                                      boolean bindMountExtendedSyspropOverrides,
                                                       long startSeq,
                                                       @Nullable String[] extraArgs,
                                                       @Nullable String flatExtraArgs)
@@ -786,6 +788,10 @@ public class ZygoteProcess {
 
         if (bindMountOverrideSysprops) {
             argsForZygote.add(Zygote.BIND_MOUNT_SYSPROP_OVERRIDES);
+        }
+
+        if (bindMountExtendedSyspropOverrides) {
+            argsForZygote.add(Zygote.BIND_MOUNT_EXTENDED_SYSPROP_OVERRIDES);
         }
 
         if (disabledCompatChanges != null && disabledCompatChanges.length > 0) {
@@ -1342,6 +1348,7 @@ public class ZygoteProcess {
                     null /* disabledCompatChanges */, null /* pkgDataInfoMap */,
                     null /* allowlistedDataInfoList */, true /* bindMountAppsData*/,
                     /* bindMountAppStorageDirs */ false, /*bindMountOverrideSysprops */ false,
+                    /* bindMountExtendedSyspropOverrides */ false,
                     /* startSeq */ 0, extraArgs, flatExtraArgs);
 
         } catch (ZygoteStartFailedEx ex) {

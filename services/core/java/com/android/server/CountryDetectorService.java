@@ -17,8 +17,10 @@
 package com.android.server;
 
 import android.content.Context;
+import android.content.pm.ApplicationInfo;
 import android.content.pm.GosPackageState;
-import android.content.pm.GosPackageStateFlag;
+import android.content.pm.PackageManager;
+import android.ext.settings.app.AswHideCarrierInfo;
 import android.location.Country;
 import android.location.CountryListener;
 import android.location.ICountryDetector;
@@ -63,10 +65,16 @@ public class CountryDetectorService extends ICountryDetector.Stub {
     private final class Receiver implements IBinder.DeathRecipient {
         private final ICountryListener mListener;
         private final IBinder mKey;
+        private final boolean mHideCarrierSource;
 
-        public Receiver(ICountryListener listener) {
+        public Receiver(ICountryListener listener, boolean hideCarrierSource) {
             mListener = listener;
             mKey = listener.asBinder();
+            mHideCarrierSource = hideCarrierSource;
+        }
+
+        public boolean shouldHideCarrierSource() {
+            return mHideCarrierSource;
         }
 
         public void binderDied() {
@@ -117,21 +125,37 @@ public class CountryDetectorService extends ICountryDetector.Stub {
         mHandler = handler;
     }
 
+    private boolean shouldHideCarrierSourceForCallingUid() {
+        int callingUid = Binder.getCallingUid();
+        if (callingUid == Process.myUid()) {
+            return false;
+        }
+        int userId = UserHandle.getUserId(callingUid);
+        final long token = Binder.clearCallingIdentity();
+        try {
+            String[] pkgs = mContext.getPackageManager().getPackagesForUid(callingUid);
+            if (pkgs == null) {
+                return false;
+            }
+            ApplicationInfo appInfo;
+            try {
+                appInfo = mContext.getPackageManager().getApplicationInfo(pkgs[0], 0);
+            } catch (PackageManager.NameNotFoundException e) {
+                return false;
+            }
+            GosPackageState ps = GosPackageState.get(pkgs[0], userId);
+            return AswHideCarrierInfo.I.get(mContext, userId, appInfo, ps);
+        } finally {
+            Binder.restoreCallingIdentity(token);
+        }
+    }
+
     @Override
     public Country detectCountry() {
         if (!mSystemReady) {
             return null; // server not yet active
         }
-        int callingUid = Binder.getCallingUid();
-        boolean hideCarrierSource = false;
-        if (callingUid != Process.myUid()) {
-            String[] pkgs = mContext.getPackageManager().getPackagesForUid(callingUid);
-            if (pkgs != null) {
-                hideCarrierSource = GosPackageState.get(pkgs[0], UserHandle.getUserId(callingUid))
-                        .hasFlag(GosPackageStateFlag.HIDE_CARRIER_INFO);
-            }
-        }
-        return mCountryDetector.detectCountry(hideCarrierSource);
+        return mCountryDetector.detectCountry(shouldHideCarrierSourceForCallingUid());
     }
 
     /**
@@ -142,7 +166,7 @@ public class CountryDetectorService extends ICountryDetector.Stub {
         if (!mSystemReady) {
             throw new RemoteException();
         }
-        addListener(listener);
+        addListener(listener, shouldHideCarrierSourceForCallingUid());
     }
 
     /**
@@ -156,12 +180,12 @@ public class CountryDetectorService extends ICountryDetector.Stub {
         removeListener(listener.asBinder());
     }
 
-    private void addListener(ICountryListener listener) {
+    private void addListener(ICountryListener listener, boolean hideCarrierSource) {
         synchronized (mReceivers) {
-            Receiver r = new Receiver(listener);
+            Receiver r = new Receiver(listener, hideCarrierSource);
             try {
                 listener.asBinder().linkToDeath(r, 0);
-                final Country country = detectCountry();
+                final Country country = mCountryDetector.detectCountry(hideCarrierSource);
                 if (country != null) {
                     listener.onCountryDetected(country);
                 }
@@ -188,8 +212,15 @@ public class CountryDetectorService extends ICountryDetector.Stub {
 
     protected void notifyReceivers(Country country) {
         synchronized (mReceivers) {
+            final boolean carrierDerived = country != null
+                    && (country.getSource() == Country.COUNTRY_SOURCE_NETWORK
+                            || country.getSource() == Country.COUNTRY_SOURCE_SIM);
             for (Receiver receiver : mReceivers.values()) {
                 try {
+                    if (carrierDerived && receiver.shouldHideCarrierSource()) {
+                        // drop carrier-derived updates for flagged listeners
+                        continue;
+                    }
                     receiver.getListener().onCountryDetected(country);
                 } catch (RemoteException e) {
                     // TODO: Shall we remove the receiver?

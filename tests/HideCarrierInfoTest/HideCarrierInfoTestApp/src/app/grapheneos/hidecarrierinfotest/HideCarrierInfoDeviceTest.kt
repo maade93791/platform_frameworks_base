@@ -11,6 +11,8 @@ import androidx.test.runner.AndroidJUnit4
 import org.junit.Assert
 import org.junit.Test
 import org.junit.runner.RunWith
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.TimeUnit
 
 @RunWith(AndroidJUnit4::class)
 class HideCarrierInfoDeviceTest {
@@ -31,18 +33,6 @@ class HideCarrierInfoDeviceTest {
         Assert.assertFalse(tm.isNetworkRoaming)
         Assert.assertEquals(TelephonyManager.SIM_STATE_ABSENT, tm.simState)
         Assert.assertEquals(TelephonyManager.SIM_STATE_ABSENT, tm.getSimState(0))
-
-        // sysprops shouldFilter()
-        Assert.assertTrue(HideCarrierInfo.shouldFilter("gsm.sim.operator.alpha"))
-        Assert.assertTrue(HideCarrierInfo.shouldFilter("gsm.sim.operator.numeric"))
-        Assert.assertTrue(HideCarrierInfo.shouldFilter("gsm.operator.alpha"))
-        Assert.assertTrue(HideCarrierInfo.shouldFilter("gsm.operator.numeric"))
-        Assert.assertTrue(HideCarrierInfo.shouldFilter("gsm.operator.iso-country"))
-        Assert.assertTrue(HideCarrierInfo.shouldFilter("gsm.sim.state"))
-
-        // non-replacements
-        Assert.assertFalse(HideCarrierInfo.shouldFilter("ro.product.cpu.abi"))
-        Assert.assertFalse(HideCarrierInfo.shouldFilter("gsm.version.baseband"))
 
         // sysprops replacements
         Assert.assertEquals("", SystemProperties.get("gsm.sim.operator.alpha"))
@@ -67,16 +57,29 @@ class HideCarrierInfoDeviceTest {
                         src == Country.COUNTRY_SOURCE_LOCALE,
                 )
             }
+
+            val latch = CountDownLatch(1)
+            var listenerCountry: Country? = null
+            val callback: (Country) -> Unit = { c ->
+                listenerCountry = c
+                latch.countDown()
+            }
+            cd.registerCountryDetectorCallback({ it.run() }, callback)
+            cd.unregisterCountryDetectorCallback(callback)
+            Assert.assertTrue("CountryDetectorCallback was not called on registration",
+                latch.await(5, TimeUnit.SECONDS))
+            val listenerSrc = listenerCountry!!.source
+            Assert.assertTrue(
+                "CountryDetectorCallback source=$listenerSrc must be LOCATION or LOCALE when hidden",
+                listenerSrc == Country.COUNTRY_SOURCE_LOCATION ||
+                    listenerSrc == Country.COUNTRY_SOURCE_LOCALE,
+            )
         }
     }
 
     @Test
     fun testCarrierInfoVisible() {
         Assert.assertFalse("HideCarrierInfo.isEnabled()", HideCarrierInfo.isEnabled())
-
-        Assert.assertFalse(HideCarrierInfo.shouldFilter("gsm.sim.operator.alpha"))
-        Assert.assertFalse(HideCarrierInfo.shouldFilter("gsm.operator.alpha"))
-        Assert.assertFalse(HideCarrierInfo.shouldFilter("ro.product.cpu.abi"))
 
         Assert.assertNotEquals("", SystemProperties.get("ro.product.cpu.abi"))
 
